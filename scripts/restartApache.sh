@@ -1,2 +1,2 @@
 #!/bin/bash
-/etc/init.d/apache2 restart
+service apache2 restart
