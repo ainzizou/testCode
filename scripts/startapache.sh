@@ -1,2 +1,2 @@
 #!/bin/bash
-apt install apache2 -y
+/etc/init.d/apache2 start
