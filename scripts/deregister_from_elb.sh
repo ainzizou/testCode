@@ -15,7 +15,7 @@
 
 . $(dirname $0)/common_functions.sh
 
-msg "Running AWS CLI with region: $(get_instance_region)"
+echo "Running AWS CLI with region: $(get_instance_region)"
 
 # get this instance's ID
 INSTANCE_ID=$(get_instance_id)
@@ -24,51 +24,51 @@ if [ $? != 0 -o -z "$INSTANCE_ID" ]; then
 fi
 
 # Get current time
-msg "Started $(basename $0) at $(/bin/date "+%F %T")"
+echo "Started $(basename $0) at $(/bin/date "+%F %T")"
 start_sec=$(/bin/date +%s.%N)
 
-msg "Checking if instance $INSTANCE_ID is part of an AutoScaling group"
+echo "Checking if instance $INSTANCE_ID is part of an AutoScaling group"
 asg=$(autoscaling_group_name $INSTANCE_ID)
 if [ $? == 0 -a -n "${asg}" ]; then
-    msg "Found AutoScaling group for instance $INSTANCE_ID: ${asg}"
+    echo "Found AutoScaling group for instance $INSTANCE_ID: ${asg}"
     
-    msg "Checking that installed CLI version is at least at version required for AutoScaling Standby"
+    echo "Checking that installed CLI version is at least at version required for AutoScaling Standby"
     check_cli_version
     if [ $? != 0 ]; then
         error_exit "CLI must be at least version ${MIN_CLI_X}.${MIN_CLI_Y}.${MIN_CLI_Z} to work with AutoScaling Standby"
     fi
 
-    msg "Attempting to put instance into Standby"
+    echo "Attempting to put instance into Standby"
     autoscaling_enter_standby $INSTANCE_ID "${asg}"
     if [ $? != 0 ]; then
         error_exit "Failed to move instance into standby"
     else
-        msg "Instance is in standby"
-        finish_msg
+        echo "Instance is in standby"
+        finish_echo
         exit 0
     fi
 fi
 
-msg "Instance is not part of an ASG, trying with ELB..."
+echo "Instance is not part of an ASG, trying with ELB..."
 
 set_flag "dereg" "true"
 
 if [ -z "$ELB_LIST" ]; then
     error_exit "ELB_LIST is empty. Must have at least one load balancer to deregister from, or \"_all_\", \"_any_\" values."
 elif [ "${ELB_LIST}" = "_all_" ]; then
-    msg "Automatically finding all the ELBs that this instance is registered to..."
+    echo "Automatically finding all the ELBs that this instance is registered to..."
     get_elb_list $INSTANCE_ID
     if [ $? != 0 ]; then
         error_exit "Couldn't find any. Must have at least one load balancer to deregister from."
     fi
     set_flag "ELBs" "$ELB_LIST"
 elif [ "${ELB_LIST}" = "_any_" ]; then
-    msg "Automatically finding all the ELBs that this instance is registered to..."
+    echo "Automatically finding all the ELBs that this instance is registered to..."
     get_elb_list $INSTANCE_ID
     if [ $? != 0 ]; then
-        msg "Couldn't find any, but ELB_LIST=any so finishing successfully without deregistering."
+        echo "Couldn't find any, but ELB_LIST=any so finishing successfully without deregistering."
         set_flag "ELBs" ""
-        finish_msg
+        finish_echo
         exit 0
     fi
     set_flag "ELBs" "$ELB_LIST"
@@ -76,14 +76,14 @@ fi
 
 # Loop through all LBs the user set, and attempt to deregister this instance from them.
 for elb in $ELB_LIST; do
-    msg "Checking validity of load balancer named '$elb'"
+    echo "Checking validity of load balancer named '$elb'"
     validate_elb $INSTANCE_ID $elb
     if [ $? != 0 ]; then
-        msg "Error validating $elb; cannot continue with this LB"
+        echo "Error validating $elb; cannot continue with this LB"
         continue
     fi
 
-    msg "Deregistering $INSTANCE_ID from $elb"
+    echo "Deregistering $INSTANCE_ID from $elb"
     deregister_instance $INSTANCE_ID $elb
 
     if [ $? != 0 ]; then
@@ -92,7 +92,7 @@ for elb in $ELB_LIST; do
 done
 
 # Wait for all deregistrations to finish
-msg "Waiting for instance to de-register from its load balancers"
+echo "Waiting for instance to de-register from its load balancers"
 for elb in $ELB_LIST; do
     wait_for_state "elb" $INSTANCE_ID "OutOfService" $elb
     if [ $? != 0 ]; then
@@ -100,4 +100,4 @@ for elb in $ELB_LIST; do
     fi
 done
 
-finish_msg
+finish_echo
