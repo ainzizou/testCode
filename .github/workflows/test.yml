@@ -1,0 +1,19 @@
+name: Reuse Workflow
+on:
+  repository_dispatch:
+    types:
+      - build
+
+jobs:
+  build-compat:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        apps: [linking, visibility]
+        version: ${{ github.event.client_payload.unit }}
+    steps:
+      - run: |
+            echo "Building app: ${{ matrix.apps }}"
+      - name: build app ${{ matrix.apps }}
+        run: |
+        echo ${{ matrix.apps }} ${{ matrix.version }}
